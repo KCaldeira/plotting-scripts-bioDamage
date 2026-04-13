@@ -34,9 +34,15 @@ def ratio_to_percent(r):
 
 
 def format_percent(p):
-    """Format percent labels cleanly."""
+    """Format percent labels cleanly.  Never rounds to -100%."""
     if abs(p) < 1e-12:
         return "0%"
+    # Values between -100 and -99: show as -99.9…9%
+    if -100 < p < -99:
+        # number of 9s after the decimal = number of digits needed
+        nines = -math.log10(100 + p)  # e.g. -99.9 -> 1, -99.99 -> 2
+        decimals = max(1, math.ceil(nines - 1e-9))
+        return f"{p:.{decimals}f}%"
     sign = "+" if p > 0 else ""
     if abs(p) >= 1:
         return f"{sign}{round(p):.0f}%"
@@ -202,6 +208,24 @@ def choose_ratio_percent_ticks(rmin, rmax, symmetric=False, buffer=0.05):
         if abs(candidates_log[zero_idx]) < 1e-12:
             ticks.append((0, 0.0))
             ticks.sort(key=lambda t: t[1])
+
+    # Drop ticks that are too close together (< 5% of axis span).
+    # Always keep zero as the anchor.
+    total_span = ticks[-1][1] - ticks[0][1]
+    min_gap = total_span * 0.05
+    if min_gap > 0:
+        filtered = [ticks[0]]
+        for t in ticks[1:]:
+            if abs(t[1]) < 1e-12:
+                # Always keep zero; if previous tick is too close, remove it
+                if abs(filtered[-1][1] - t[1]) < min_gap:
+                    filtered[-1] = t
+                else:
+                    filtered.append(t)
+            elif t[1] - filtered[-1][1] >= min_gap:
+                filtered.append(t)
+            # else: skip this tick (too close to previous kept tick)
+        ticks = filtered
 
     # Plot bounds cover both the outermost ticks and the buffered data range
     plot_min = min(ticks[0][1], y_min_new)

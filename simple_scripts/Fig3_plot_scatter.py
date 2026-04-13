@@ -88,7 +88,18 @@ def fig3_plot_scatter():
 
     sm = ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
-    fig.colorbar(sm, ax=fig.axes, fraction=0.03, pad=0.02, shrink=0.5, label='log10(model / empirical)')
+    # Colorbar with percent-change labels
+    cb_ratios = [10.0 ** color_range[0], 10.0 ** color_range[1]]
+    _, cb_ticks_ln, cb_pct_labels = get_axis_bounds_and_ticks_ratio_pct(cb_ratios)
+    cb_ticks_log10 = [t / _LN10 for t in cb_ticks_ln]
+    # Keep only ticks within the colorbar range
+    cb_filtered = [(t, p) for t, p in zip(cb_ticks_log10, cb_pct_labels)
+                   if color_range[0] <= t <= color_range[1]]
+    cb_ticks = [t for t, _ in cb_filtered]
+    cb_labels = [format_percent(p) for _, p in cb_filtered]
+    cbar = fig.colorbar(sm, ax=fig.axes, fraction=0.03, pad=0.02, shrink=0.5, label='Model / Empirical')
+    cbar.set_ticks(cb_ticks)
+    cbar.set_ticklabels(cb_labels)
 
     fig.savefig('./data/output/Fig3_scatter.pdf', dpi=300)
     plt.close(fig)

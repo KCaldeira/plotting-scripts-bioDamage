@@ -39,7 +39,7 @@ def _ratio_pct_colorbar_params(rmin, rmax):
 
 def add_panel(ax, data, norm, ticks, labels, title, lon, lat):
     mp = ax.pcolormesh(lon, lat, data, cmap=GPP_COUNTRY_MAP_CMAP, shading='auto', norm=norm, transform=ccrs.PlateCarree())
-    cb = plt.colorbar(mp, ax=ax, extend='both', shrink=0.5, orientation='horizontal', ticks=ticks)
+    cb = plt.colorbar(mp, ax=ax, extend='both', shrink=0.75, orientation='horizontal', ticks=ticks)
     cb.set_ticklabels(labels)
     ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
     ax.add_feature(cfeature.BORDERS, linewidth=0.3)
