@@ -1,5 +1,5 @@
 import pandas as pd, numpy as np, os
-import xcdat as xc, xarray as xr
+import xarray as xr
 from scipy.signal import butter, filtfilt
 
 def get_dummy_reg(var, pf, drop_first=True):
@@ -10,7 +10,7 @@ def construct_file_name(model_name, grid_type, case_name, var):
     return f'{grid_type}_{str(var)}_{model_name}_{case_name}.nc'
 
 def get_netcdf_var(filename): 
-    return xc.open_dataset(filename, decode_times=False) 
+    return xr.open_dataset(filename, decode_times=False) 
     
 def calculate_growth(df_base, key_old, key_new, geo_level):
     pd_growth = df_base[['model', 'year', 'region', key_old]].copy()
@@ -66,18 +66,18 @@ def highpass(series, cutoff=1/10, order=3):
 def get_land_ocean_areacella(model_to_examine, model_data, analysis_data):
     land_ocean_areacella_fileName = f'land_ocean_areacella_ds_{model_to_examine}.nc'
     if land_ocean_areacella_fileName in os.listdir(analysis_data + 'sub_region_masks'):
-        ds_land_ocean_areacella = xc.open_dataset(os.path.join(analysis_data, 'sub_region_masks', land_ocean_areacella_fileName), 
+        ds_land_ocean_areacella = xr.open_dataset(os.path.join(analysis_data, 'sub_region_masks', land_ocean_areacella_fileName), 
                                                 decode_times=False)
     else:
         #### Land mask and ocean mask from sftlf file
         sftlf_file_name = f'{model_data}sftlf_fx_{model_to_examine}_piControl.nc' 
-        ds_sftlf = xc.open_dataset(sftlf_file_name, decode_times=False) 
+        ds_sftlf = xr.open_dataset(sftlf_file_name, decode_times=False) 
         sftlf = ds_sftlf['sftlf'] 
         land_mask = xr.where(sftlf >= 50.0, 1.0, 0.0)
         ocean_mask = xr.where(sftlf < 50.0, 1.0, 0.0) 
         #### Cell area from areacella file 
         areacella_file_name = f'{model_data}areacella_fx_{model_to_examine}_piControl.nc' 
-        ds_areacella = xc.open_dataset(areacella_file_name, decode_times=False) 
+        ds_areacella = xr.open_dataset(areacella_file_name, decode_times=False) 
         areacella = ds_areacella['areacella']
         #### Store these variables in xArray dataset
         ds_land_ocean_areacella = xr.Dataset({

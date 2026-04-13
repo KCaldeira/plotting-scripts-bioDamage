@@ -10,7 +10,6 @@ cartopy>=0.22
 
 # NetCDF / gridded data (utils.func_shared, model data loaders)
 xarray>=2023.1.0
-xcdat>=0.6.0
 netCDF4>=1.6.0
 
 # Regression utilities (utils.func_regression, func_getModelPanada)
