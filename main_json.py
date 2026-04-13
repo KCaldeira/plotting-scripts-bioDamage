@@ -35,7 +35,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 def run_pipeline(config):
 
     #### Read data
-    data = load('main_analysis_state.joblib')
+    data = load('./data/input/main_analysis_state.joblib')
     main_analysis = SimpleNamespace(data)
 
     #### Plotting 

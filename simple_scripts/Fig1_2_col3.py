@@ -1,7 +1,11 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
-import pandas as pd 
+import pandas as pd
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'axes-main'))
+from ratio_percent_ticks import get_axis_bounds_and_ticks_ratio_pct, format_percent
+from amount_arcsinh_ticks import get_axis_bounds_and_ticks_arcsinh, format_amount
 
 _MAIN_ONLY_MODEL = 'ACCESS-ESM1-5'
 _CD_FIG_WIDTH_IN = 6.3
@@ -16,8 +20,10 @@ _CD_SCATTER_S = 28
 
 def _draw_distribution_country(ax, data_native, pos, color, yscale):
     y = np.asarray(data_native, dtype=float)
-    if yscale == 'arcsinh': 
-        y = np.arcsinh(y) 
+    if yscale == 'arcsinh':
+        y = np.arcsinh(y)
+    elif yscale == 'ratio':
+        y = np.log(1 + y / 100)
 
     model, pCentral, p5, p25, p75, p95 = y[0], y[1], y[2], y[3], y[4], y[5]
     box_h = max(p75 - p25, 1e-9)
@@ -45,7 +51,7 @@ def plot_each_panel(ax, df_model_results, emp_cumsum, color, yscale):
 
     country_selected = df_model_results['region_list']
     n_sel = len(country_selected)
-    
+
     model_cumsum = np.array(df_model_results['model_cumulative'].values.tolist())
     emp_cumsum_central = np.array(df_model_results[emp_cumsum].values.tolist())
     emp_cumsum_5 = np.array(df_model_results[f'{emp_cumsum}_5'].values.tolist())
@@ -58,10 +64,29 @@ def plot_each_panel(ax, df_model_results, emp_cumsum, color, yscale):
         _draw_distribution_country(ax, col_y, ci, color, yscale)
     ax.axhline(y=0.0, color='black', linewidth=1.3, linestyle='--', zorder=4)
 
-def plot_figure1_2_col3(plot_type): 
+    # Set axis ticks using utilities
+    all_raw = np.concatenate([model_cumsum, emp_cumsum_central, emp_cumsum_5, emp_cumsum_95])
+    all_raw = all_raw[np.isfinite(all_raw)]
 
-    df_results = pd.read_csv(f'./simple_scripts/growth_rate_country_barPlotDistribution.csv')
-    model_list = df_results['model_name'].unique() 
+    if yscale == 'arcsinh':
+        bounds, ticks_vals, amount_labels = get_axis_bounds_and_ticks_arcsinh(
+            [all_raw.min(), all_raw.max()], scale=1.0)
+        ax.set_ylim(bounds)
+        ax.set_yticks(ticks_vals)
+        ax.set_yticklabels([format_amount(a) for a in amount_labels])
+    elif yscale == 'ratio':
+        ratios = 1 + all_raw / 100
+        ratios = ratios[ratios > 0]
+        bounds, ticks_vals, pct_labels = get_axis_bounds_and_ticks_ratio_pct(
+            [ratios.min(), ratios.max()])
+        ax.set_ylim(bounds)
+        ax.set_yticks(ticks_vals)
+        ax.set_yticklabels([format_percent(p) for p in pct_labels])
+
+def plot_figure1_2_col3(plot_type):
+
+    df_results = pd.read_csv(f'./data/input/growth_rate_country_barPlotDistribution.csv')
+    model_list = df_results['model_name'].unique()
 
     if plot_type == 'main':
         models_to_plot = [m for m in model_list if m == _MAIN_ONLY_MODEL]
@@ -71,11 +96,12 @@ def plot_figure1_2_col3(plot_type):
     for model_i in models_to_plot:
 
         model_i = 'CNRM-ESM2-1'
-        
+
         df_model_results = df_results[df_results['model_name'] == model_i]
-        fig, axs = plt.subplots(2, 2, figsize=(10, 6), sharex=True, sharey='col', constrained_layout=True)
+        fig, axs = plt.subplots(2, 2, figsize=(10, 6), sharex=True, constrained_layout=True)
         plot_each_panel(axs[0, 0], df_model_results, 'burke_growth', 'firebrick', 'arcsinh')
-        plot_each_panel(axs[0, 1], df_model_results, 'burke_level', 'royalblue', 'linear')
+        plot_each_panel(axs[0, 1], df_model_results, 'burke_level', 'royalblue', 'ratio')
         plot_each_panel(axs[1, 0], df_model_results, 'newell_growth', 'firebrick', 'arcsinh')
-        plot_each_panel(axs[1, 1], df_model_results, 'newell_level', 'royalblue', 'linear')
-        plt.show() 
+        plot_each_panel(axs[1, 1], df_model_results, 'newell_level', 'royalblue', 'ratio')
+        fig.savefig(f'./data/output/Fig1_2_col3_{plot_type}_{model_i}.pdf', dpi=300)
+        plt.close(fig)

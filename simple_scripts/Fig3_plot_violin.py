@@ -1,7 +1,12 @@
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'axes-main'))
+from ratio_percent_ticks import get_axis_bounds_and_ticks_ratio_pct, format_percent
+
+_LN10 = np.log(10)
+
 
 def _weighted_mean_log10(y, weights):
     ok = np.isfinite(y) & np.isfinite(weights) & (weights > 0)
@@ -103,26 +108,30 @@ def plot_violin_panel(df_model_results, ax, title=None):
         ax.set_xticklabels(labels_use, rotation=12, ha='right')
     ax.set_xlim(0.35, 3.65)
 
+    # Set y-axis ticks using ratio_percent_ticks utility
     if len(y_all) > 0:
-        lo, hi = float(min(y_all)), float(max(y_all))
-        sp = hi - lo
-        pad = max(0.06 * sp, 0.02) if sp > 0 else 0.05
-        ax.set_ylim(lo - pad, hi + pad)
-        ax.yaxis.set_major_locator(mticker.MaxNLocator(nbins=6, min_n_ticks=4))
+        y_arr = np.array(y_all)
+        ratios = 10.0 ** y_arr[np.isfinite(y_arr)]
+        bounds_ln, ticks_ln, pct_labels = get_axis_bounds_and_ticks_ratio_pct(
+            [ratios.min(), ratios.max()])
+        bounds = [b / _LN10 for b in bounds_ln]
+        ticks_log10 = [t / _LN10 for t in ticks_ln]
+        ax.set_ylim(bounds)
+        ax.set_yticks(ticks_log10)
+        ax.set_yticklabels([format_percent(p) for p in pct_labels])
     else:
         ax.set_ylim(-0.2, 0.0)
         ax.set_yticks([-0.2, -0.1, 0.0])
 
     ax.set_box_aspect(1)
-    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda y, _: f'{10**y:.2f}'))
-    ax.set_ylabel('GPP / BGC ratio')
+    ax.set_ylabel('GPP change  (full vs BGC)')
     if title is not None:
         ax.set_title(title)
 
 
 def fig3_plot_violin():
 
-    df_results = pd.read_csv(f'./simple_scripts/figure3_data.csv')
+    df_results = pd.read_csv(f'./data/input/figure3_data.csv')
 
     model_list = df_results['model_name'].unique()
     n_models = len(model_list)
@@ -139,6 +148,5 @@ def fig3_plot_violin():
             title=f'{model_i}  —  level  (2080–2100)',
         )
 
-    plt.show()
-    # plt.savefig('burke_gpp_countries_violin.svg')
-    # plt.clf()
+    fig.savefig('./data/output/Fig3_violin.pdf', dpi=300)
+    plt.close(fig)
