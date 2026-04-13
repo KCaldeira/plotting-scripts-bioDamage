@@ -1,0 +1,30 @@
+{
+    "run_metadata":{
+        "run_id": "plotting_subroutines",
+        "run_name": "plotting subroutines",
+        "run_description": "Scrips used to make the main plots for the damage-bio paper",
+        "created_date": "2026-04-10"
+    },
+    
+    "action_Burke_1":{ 
+        "__comment": "Burke assumptions with area-weighted GPP", 
+        "action_name": "main-analysis", 
+        "action_flag": true,
+        "action_list":{ 
+            "burke_growth": true, 
+            "burke_level": true,
+            "newell_all800": true
+        }, 
+        "plotting_list":{ 
+            "growth_rate_global_mean_timeSeries": false, 
+            "growth_rate_country_boxplotLikeDistribution": false,
+            "growth_rate_country_barPlotDistribution": false,
+            "growth_rate_country_boxplotLikeSelectedCountries": false, 
+            "gpp_country_map": false,
+            "gpp_country_scatter": false, 
+            "gpp_country_violin": false
+        },
+        "bootstrap_num": 1000
+    }
+
+} 

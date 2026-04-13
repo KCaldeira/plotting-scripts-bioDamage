@@ -1,0 +1,144 @@
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+import numpy as np
+import pandas as pd
+
+def _weighted_mean_log10(y, weights):
+    ok = np.isfinite(y) & np.isfinite(weights) & (weights > 0)
+    if np.any(ok):
+        return float(np.average(y[ok], weights=weights[ok]))
+    ok2 = np.isfinite(y)
+    if np.any(ok2):
+        return float(np.nanmean(y[ok2]))
+    return None
+
+
+def plot_violin_panel(df_model_results, ax, title=None):
+    """One panel: Model, Burke central, and Newell median (level, per country)."""
+    color = 'royalblue'
+    y_model = df_model_results['model_log10ratio'].to_numpy()
+    y_burke = df_model_results['burke_level_log10ratio'].to_numpy()
+    y_newell = df_model_results['newell_level_log10ratio'].to_numpy()
+    area = df_model_results['area'].to_numpy()
+
+    datasets, positions, labels_use = [], [], []
+    star_x, star_y, star_ec, star_fc = [], [], [], []
+    y_all = []
+
+    x_labels = [
+        'Model\n(per country)',
+        'Burke central\n(per country)',
+        'Newell median\n(per country)',
+    ]
+    series = [
+        (y_model, 1.0, 'model'),
+        (y_burke, 2.0, 'burke'),
+        (y_newell, 3.0, 'newell'),
+    ]
+
+    for y_arr, pos, kind in series:
+        ok = np.isfinite(y_arr)
+        if not np.any(ok):
+            continue
+        datasets.append(y_arr[ok])
+        positions.append(pos)
+        labels_use.append(x_labels[int(pos) - 1])
+        sy = _weighted_mean_log10(y_arr, area)
+        if sy is not None:
+            star_x.append(pos)
+            star_y.append(sy)
+            if kind == 'model':
+                star_ec.append('black')
+                star_fc.append('white')
+            elif kind == 'burke':
+                star_ec.append(color)
+                star_fc.append('white')
+            else:
+                star_ec.append(color)
+                star_fc.append(color)
+        y_all.extend(y_arr[ok].tolist())
+        if sy is not None:
+            y_all.append(sy)
+
+    if len(datasets) > 0:
+        vp = ax.violinplot(
+            datasets,
+            positions=positions,
+            widths=0.5,
+            showmeans=False,
+            showmedians=False,
+            showextrema=False,
+        )
+        for b, body in enumerate(vp['bodies']):
+            pos = positions[b]
+            if pos == 1.0:
+                fc, ec, al = '0.25', 'black', 0.75
+            elif pos == 2.0:
+                fc, ec, al = color, color, 0.55
+            else:
+                fc, ec, al = color, color, 0.35
+            body.set_facecolor(fc)
+            body.set_edgecolor(ec)
+            body.set_alpha(al)
+            body.set_linewidth(1.2)
+        for partname in ('cbars', 'cmins', 'cmaxes', 'cmedians'):
+            if partname in vp and vp[partname] is not None:
+                vp[partname].set_visible(False)
+
+    if len(star_x) > 0:
+        ax.scatter(
+            star_x,
+            star_y,
+            marker='*',
+            s=110,
+            zorder=5,
+            facecolors=star_fc,
+            edgecolors=star_ec,
+            linewidths=1.4,
+        )
+
+    ax.axhline(0, color='black', linewidth=0.8, linestyle='--', zorder=0)
+    if len(positions) > 0:
+        ax.set_xticks(positions)
+        ax.set_xticklabels(labels_use, rotation=12, ha='right')
+    ax.set_xlim(0.35, 3.65)
+
+    if len(y_all) > 0:
+        lo, hi = float(min(y_all)), float(max(y_all))
+        sp = hi - lo
+        pad = max(0.06 * sp, 0.02) if sp > 0 else 0.05
+        ax.set_ylim(lo - pad, hi + pad)
+        ax.yaxis.set_major_locator(mticker.MaxNLocator(nbins=6, min_n_ticks=4))
+    else:
+        ax.set_ylim(-0.2, 0.0)
+        ax.set_yticks([-0.2, -0.1, 0.0])
+
+    ax.set_box_aspect(1)
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda y, _: f'{10**y:.2f}'))
+    ax.set_ylabel('GPP / BGC ratio')
+    if title is not None:
+        ax.set_title(title)
+
+
+def fig3_plot_violin():
+
+    df_results = pd.read_csv(f'./simple_scripts/figure3_data.csv')
+
+    model_list = df_results['model_name'].unique()
+    n_models = len(model_list)
+    fig_w_in = 6.0
+    fig_h_in = fig_w_in * n_models * 0.55
+    fig, axs = plt.subplots(n_models, 1, figsize=(fig_w_in, fig_h_in), constrained_layout=True)
+    axs = np.atleast_1d(axs)
+
+    for model_idx, model_i in enumerate(model_list):
+        df_model_results = df_results[df_results['model_name'] == model_i]
+        plot_violin_panel(
+            df_model_results,
+            axs[model_idx],
+            title=f'{model_i}  —  level  (2080–2100)',
+        )
+
+    plt.show()
+    # plt.savefig('burke_gpp_countries_violin.svg')
+    # plt.clf()

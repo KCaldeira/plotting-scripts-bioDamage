@@ -1,0 +1,10 @@
+# Large data files
+*.joblib
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# macOS
+.DS_Store
